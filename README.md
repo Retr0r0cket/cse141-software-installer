@@ -7,7 +7,7 @@ Automated, isolated deployment of OSS CAD Suite (Yosys, NextPNR, GHDL) and the `
 Clone the repository:
 
 ```bash
-git clone [https://github.com/Retr0r0cket/cse141-software-installer.git](https://github.com/Retr0r0cket/cse141-software-installer.git)
+git clone https://github.com/Retr0r0cket/cse141-software-installer.git
 cd cse141-software-installer
 ```
 
