@@ -9,6 +9,7 @@ git clone [https://github.com/Retr0r0cket/cse141-software-installer.git](https:/
 cd cse141-software-installer
 chmod +x install.sh
 ./install.sh
+```
 
 Just 'cse141-env' to start the env
 
