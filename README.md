@@ -16,11 +16,10 @@ cd cse141-software-installer
 Installs directly into `~/.local/share/cse141-env` and symlinks the runner into `~/.local/bin`:
 
 ```bash
-chmod install-standalone.sh
 ./install-standalone.sh
 ```
 
-Ensure `~/.local/bin` is in your `PATH`:
+If it says the env cannot be found, ensure `~/.local/bin` is in your `PATH` (which should happen by default during installation):
 ```bash
 export PATH="$HOME/.local/bin:$PATH"
 ```
@@ -30,8 +29,7 @@ export PATH="$HOME/.local/bin:$PATH"
 Installs isolated via a local tap formula:
 
 ```bash
-chmod install.sh
-./install.sh
+./install-homebrew.sh
 ```
 
 > **Note on warnings:** You may see red sandbox warnings (`sandbox_operation.rb fix_linkage`) during a Homebrew installation. These are expected for pre-compiled EDA binaries on macOS and do not affect functionality.
@@ -44,12 +42,6 @@ Start the isolated subshell environment:
 
 ```bash
 cse141-env
-```
-
-To verify active tools within the subshell:
-
-```bash
-which yosys nextpnr-ice40 ghdl just
 ```
 
 Exit the subshell when finished:
@@ -65,7 +57,6 @@ exit
 To remove the standalone setup:
 
 ```bash
-chmod uninstall-standalone.sh
 ./uninstall-standalone.sh
 ```
 
