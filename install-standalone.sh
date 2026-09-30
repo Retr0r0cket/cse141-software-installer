@@ -79,10 +79,45 @@ EOF
 
 chmod +x "${BIN_DIR}/cse141-env"
 
-# 5. Handle Fish shell PATH configuration if fish is detected
+# 5. Automatically configure PATH for detected shells
+echo "==> Configuring shell PATH..."
+
+# 5a. Fish shell configuration
 if command -v fish >/dev/null 2>&1; then
-    echo "==> Fish detected. Adding '${BIN_DIR}' to universal fish_user_paths..."
+    echo "Configuring Fish shell..."
     fish -c "fish_add_path -U '${BIN_DIR}'" 2>/dev/null || true
+fi
+
+# 5b. Zsh configuration (~/.zshrc)
+ZSHRC="${HOME}/.zshrc"
+if [[ -f "${ZSHRC}" || "${SHELL:-}" == *"zsh"* ]]; then
+    touch "${ZSHRC}"
+    if ! grep -qs 'export PATH="\$HOME/.local/bin:\$PATH"' "${ZSHRC}" && ! grep -qs "export PATH=\"${BIN_DIR}:\$PATH\"" "${ZSHRC}"; then
+        echo "Configuring Zsh (~/.zshrc)..."
+        echo '' >> "${ZSHRC}"
+        echo '# CSE 141 environment path' >> "${ZSHRC}"
+        echo 'export PATH="$HOME/.local/bin:$PATH"' >> "${ZSHRC}"
+    fi
+fi
+
+# 5c. Bash configuration (~/.bash_profile on macOS, ~/.bashrc on Linux)
+BASH_PROFILE="${HOME}/.bash_profile"
+BASHRC="${HOME}/.bashrc"
+TARGET_BASH_FILE="${BASH_PROFILE}"
+
+# On pure Linux systems without .bash_profile, use .bashrc
+if [[ "${OS}" != "Darwin" && ! -f "${BASH_PROFILE}" && -f "${BASHRC}" ]]; then
+    TARGET_BASH_FILE="${BASHRC}"
+fi
+
+if [[ -f "${TARGET_BASH_FILE}" || "${SHELL:-}" == *"bash"* ]]; then
+    touch "${TARGET_BASH_FILE}"
+    if ! grep -qs 'export PATH="\$HOME/.local/bin:\$PATH"' "${TARGET_BASH_FILE}" && ! grep -qs "export PATH=\"${BIN_DIR}:\$PATH\"" "${TARGET_BASH_FILE}"; then
+        echo "Configuring Bash (${TARGET_BASH_FILE})..."
+        echo '' >> "${TARGET_BASH_FILE}"
+        echo '# CSE 141 environment path' >> "${TARGET_BASH_FILE}"
+        echo 'export PATH="$HOME/.local/bin:$PATH"' >> "${TARGET_BASH_FILE}"
+    fi
 fi
 
 echo ""
