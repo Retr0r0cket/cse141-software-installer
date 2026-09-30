@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+export PATH="$HOME/.local/bin:$PATH"
+
+INSTALL_DIR="${HOME}/.local/share/cse141-env"
+BIN_DIR="${HOME}/.local/bin"
+ARCH="$(uname -m)"
+OS="$(uname -s)"
+
+# Validate platform
+if [[ "${OS}" != "Darwin" || "${ARCH}" != "arm64" ]]; then
+    echo "Error: This installer is tailored for macOS Apple Silicon (arm64)." >&2
+    exit 1
+fi
+
+echo "==> Creating install directories..."
+mkdir -p "${INSTALL_DIR}" "${BIN_DIR}"
+
+# 1. Download & extract OSS CAD Suite (Darwin arm64)
+echo "==> Resolving latest OSS CAD Suite release..."
+CAD_URL=$(curl -sL https://api.github.com/repos/YosysHQ/oss-cad-suite-build/releases/latest \
+  | grep "browser_download_url.*darwin-arm64.*\.tgz\"" \
+  | cut -d : -f 2,3 \
+  | tr -d ' "')
+
+CAD_TARBALL="/tmp/oss-cad-suite-darwin-arm64.tgz"
+
+echo "==> Downloading OSS CAD Suite from ${CAD_URL}..."
+curl -L --progress-bar "${CAD_URL}" -o "${CAD_TARBALL}"
+
+echo "==> Extracting to ${INSTALL_DIR}..."
+rm -rf "${INSTALL_DIR}/oss-cad-suite"
+tar -xzf "${CAD_TARBALL}" -C "${INSTALL_DIR}"
+rm -f "${CAD_TARBALL}"
+
+# 2. Fetch standalone `just` binary
+echo "==> Fetching standalone 'just' binary..."
+JUST_URL=$(curl -sL https://api.github.com/repos/casey/just/releases/latest \
+  | grep "browser_download_url.*aarch64-apple-darwin\.tar\.gz\"" \
+  | cut -d : -f 2,3 \
+  | tr -d ' "')
+
+JUST_TARBALL="/tmp/just.tar.gz"
+curl -L -s "${JUST_URL}" -o "${JUST_TARBALL}"
+
+# Ensure destination directory exists before unpacking
+mkdir -p "${INSTALL_DIR}/oss-cad-suite/bin"
+tar -xzf "${JUST_TARBALL}" -C "${INSTALL_DIR}/oss-cad-suite/bin" just
+rm -f "${JUST_TARBALL}"
+chmod +x "${INSTALL_DIR}/oss-cad-suite/bin/just"
+
+# 3. Clear quarantine flags
+echo "==> Removing macOS Gatekeeper quarantine attributes..."
+xattr -r -d com.apple.quarantine "${INSTALL_DIR}/oss-cad-suite" 2>/dev/null || true
+
+# 4. Generate the isolated subshell launcher
+echo "==> Generating 'cse141-env' launcher..."
+cat << 'EOF' > "${BIN_DIR}/cse141-env"
+#!/usr/bin/env bash
+CAD_ROOT="${HOME}/.local/share/cse141-env/oss-cad-suite"
+
+if [ ! -d "${CAD_ROOT}" ]; then
+    echo "Error: CSE 141 environment not found at ${CAD_ROOT}" >&2
+    exit 1
+fi
+
+TARGET_SHELL="${SHELL:-/bin/zsh}"
+SHELL_NAME="$(basename "${TARGET_SHELL}")"
+
+if [ "${SHELL_NAME}" = "fish" ]; then
+    exec "${TARGET_SHELL}" -C "source '${CAD_ROOT}/environment.fish'; functions -c fish_prompt __orig_fish_prompt; function fish_prompt; echo -n '(cse141) '; __orig_fish_prompt; end"
+else
+    source "${CAD_ROOT}/environment"
+    export PS1="(cse141) ${PS1:-\u@\h:\w\$ }"
+    exec "${TARGET_SHELL}" -i
+fi
+EOF
+
+chmod +x "${BIN_DIR}/cse141-env"
+
+# 5. Handle Fish shell PATH configuration if fish is detected
+if command -v fish >/dev/null 2>&1; then
+    echo "==> Fish detected. Adding '${BIN_DIR}' to universal fish_user_paths..."
+    fish -c "fish_add_path -U '${BIN_DIR}'" 2>/dev/null || true
+fi
+
+echo ""
+echo "Installation complete."
+echo "Run 'cse141-env' to start the environment."
